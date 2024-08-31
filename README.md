@@ -1,2 +1,6 @@
 # PAPIMEPE105524
-Entregables del proyecto PAPIME PE105524 "Secuencias didácticas en línea y con modelos reales para la enseñanza de la robótica móvil"
+Este repositorio contiene los entregables del proyecto PAPIME PE105524 "Secuencias didácticas en línea y con modelos reales para la enseñanza de la robótica móvil". Cada producto comprometido está contenido en una carpeta y cada carpeta contiene una descripción del entregable. Hasta el momento se tienen los siguientes productos:
+
+* Simulador de robot de servicio y ambiente doméstico usando Gazebo y ROS. Este producto aún tendrá modificaciones, pues no se ha incluído el manipulador de 6 grados de libertad porque no se ha completado la compra al extranjero, sin embargo ya se puede utilizar y se incluyen ya algunas secuencias didácticas que usan este simulador. La carpeta contiene instrucciones para su uso y la carpeta "Prácticas de laboratorio" contiene las secuencias didácticas hechas con este simulador. 
+* Participación en el Torneo Mexicano de Robótica. Varios alumnos y académicos participantes de este proyecto compitieron en el los equipos "Pumas" en el Torneo Mexicano de Robótica 2024, celebrado del 20 al 22 de abril en Monterrey, NL. La carpeta contiene las constancias de participación.
+* Práticas de laboratorio. Esta carpeta contiene las secuencias didácticas elaboradas hasta el momento. No se incluyen secuencias de manipulación, pues la compra del manipulador de 6 grados de libertad no se ha concretado. 
