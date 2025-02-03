@@ -1,5 +1,5 @@
 # Simulador de robot de servicio y ambiente doméstico usando Gazebo y ROS
-Simulador desarrollado como parte del proyecto PAPIME PE105524.
+Simulador desarrollado como parte del proyecto PAPIME-PE105524.
 
 ## Requerimientos
 
