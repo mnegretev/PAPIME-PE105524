@@ -1,0 +1,321 @@
+%%%%%%%%%%%%%%%%%%%
+%%% 2023-05-04 %%%%
+%%%%%%%%%%%%%%%%%%%
+\section{Manipulación (2023-05-04)}
+
+\begin{frame}\frametitle{Posición y Orientación}
+  Un cuerpo rígido en el espacio puede tener una posición $(x,y,z)$ y una orientación. La orientación se puede representar de varias formas:
+  \begin{itemize}
+  \item Mediante ángulos de Euler: roll, pich y yaw $RPY = (\psi, \theta, \phi)$
+  \item Mediante cuaterniones
+  \item Mediante una matriz de rotación $R \in SO(3)$
+  \end{itemize}
+  Los ángulos $RPY$ son rotaciones intrínsecas sobre los ejes $X$, $Y$, y $Z$ respectivamente. Se llaman intrínsecas porque son rotaciones que ocurren sobre un sistema de referencia \textit{atado} a un cuerpo rígido.\\
+  Cualquier orientación se puede obtener mediante la composición de tres rotaciones básicas:
+  \[R = R_{z,\phi}R_{y,\theta}R_{x,\psi}\]
+  Es decir, primero una rotación de $\phi$ radianes sobre el eje $Z$, seguida de una rotación de $\theta$ radianes sobre el eje $Y$ del sistema resultante y una rotación de $\psi$ radianes sobre el eje $X$ del sistema rotado. 
+\end{frame}
+
+\begin{frame}\frametitle{Transformaciones Homogéneas}
+  Una Transformación Homogénea es una matriz de la forma
+  \[T = \left[\begin{tabular}{cccc}
+      & & & $d_x$\\
+      & $R\in SO(3)$ & & $d_y$\\
+      & & & $d_z$\\
+      0 & 0& 0 & 1
+    \end{tabular}\right]\]
+  Puede servir para
+  \begin{itemize}
+  \item Representar la posición y orientación de un cuerpo rígido
+  \item Representar una transformación de coordenadas $T_{ab}$ de un sistema de referencia $b$ a un sistema $a$
+  \end{itemize}
+  Propiedades:
+  \begin{itemize}
+  \item Asociatividad: $(T_1 T_2) T_3 = T_1 (T_2 T_3)$
+  \item Inversa:
+    \[T = \left[\begin{tabular}{cc}
+       $R^T$ & $-R^T d$\\
+       0 & 1
+      \end{tabular}\right]\]
+  \item Cancelación de índices: $T_{ab} = T_{ac}T_{cb}$
+  \end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{El árbol cinemático}
+  Es útil tener una descripción de la forma en que están conectadas las diferentes articulaciones del robot. Se considera que sobre cada articulación hay un sistema de referencia (\textit{frame}) que está trasladado y rotado con respecto al sistema anterior.
+  \begin{multicols}{3}
+    \includegraphics[width=0.26\textwidth]{Figures/KinematicTree.png}\\
+    \footnotesize
+    El sistema \textit{absoluto} se suele llamar \texttt{map}\\
+    El sistema base del robot se suele llamar \textit{base\_link}\\
+    Las transformaciones de \texttt{map} a \texttt{base\_link} las determina el sistema de localización\\
+    El resto de las transformaciones se determinan con la posición de cada articulación\\
+    El árbol cinemático se traduce en una cadena de mulplicaciones de Transformaciones Homogéneas. 
+    \includegraphics[width=0.35\textwidth]{Figures/TfTree.pdf}
+  \end{multicols}
+\end{frame}
+
+\begin{frame}[containsverbatim]\frametitle{El formato URDF}
+  El formato URDF permite describir el arbol cinemático del robot mediante etiquetas XML:
+  \footnotesize
+  \lstinputlisting[language=XML]{Codes/URDFExample.xml}
+  \normalsize
+  Cada etiqueta \texttt{<joint>} representará una Transformación Homogénea. 
+\end{frame}
+
+\begin{frame}[containsverbatim]\frametitle{El formato Xacro}
+  El formato Xacro es un lenguaje de \textit{macros} que permite obtener archivos XML más cortos. Es últil para especificar parámetros físicos en el URDF como inercias y volúmenes:
+  \footnotesize
+  \lstinputlisting[language=XML]{Codes/XacroExample.xml}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%
+%%% 2023-05-09 %%%%
+%%%%%%%%%%%%%%%%%%%
+\section{Manipulación (2023-05-09)}
+\begin{frame}\frametitle{La cinemática directa}
+  La cinemática directa consiste en determinar la posición y orientación del efector final del manipulador a partir de la posición de cada articulación.  Esta se puede calcular con la ecuación:
+  \[P_1 = T_{12}T_{23}T_{34}T_{45}T_{56}T_{67}T_{7g}P_g\]
+  donde $P_g = [0,0,0,1]^T$ es la posición del gripper con respecto al sistema del gripper, $P_1$ es la posición del gripper con respecto al sistema base y $T_{ab}$ es la transformación homogénea que define la rotación y traslación producida por cada articulación. Las matrices $T_{ab}$
+  tienen la forma:
+  \[T_{ab} = \left[\begin{tabular}{cccc}
+      & & & $dx_{ab}$\\
+      & $R_{ab}\in SO(3)$ & & $dy_{ab}$\\
+      & & & $dz_{ab}$\\
+      0 & 0& 0 & 1
+    \end{tabular}\right]\]
+  Donde $R_{ab}$ representa la rotación del sistema $b$ respecto al sistema $a$ y $(dx_{ab}, dy_{ab}, dz_{ab})$ es la traslación del sistema $b$ respecto al sistema $a$.\\
+  La rotación $R_{ab}$ está definida en el URDF por el atributo ``rpy'' de la sub etiqueta \texttt{origin} de la etiqueta \texttt{joint} y por la posición de la articulación. La traslación $(dx_{ab}, dy_{ab}, dz_{ab})$ está definida por el atributo ``xyz''. 
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%
+%%% 2023-05-11 %%%%
+%%%%%%%%%%%%%%%%%%%
+\section{Manipulación (2023-05-11)}
+\begin{frame}\frametitle{La cinemática inversa}
+  La cinemática inversa consiste en determinar las posiciones que debe tener cada articulación para que el efector final tenga la posición y orientación deseadas.
+  \begin{itemize}
+  \item Mientras la cinemática directa siempre tiene solución, la cinemática inversa, no.
+  \item Se puede resolver por métodos geométricos para obtener una solución cerrada, aunque el análisis puede ser muy complicado.
+  \item Una solución más general se puede obtener mediante un método numérico. 
+  \end{itemize}
+  Suponiendo que se tiene una configuración deseada $p_d \in \mathbb{R}^6$ ($xyz-RPY$), se desea encontrar el conjunto de posiciones articulares $q\in\mathbb{R}^7$ que satisfagan la ecuación
+  \[FK(q) - p_d = 0\]
+  donde la función $FK$ representa la cinemática directa. 
+\end{frame}
+
+\begin{frame}\frametitle{El método Newton-Raphson}
+  El método numérico de Newton-Raphson sirve para encontrar raíces, es decir, para resolver ecuaciones de la forma
+  \[f(x) = 0\]
+  El algoritmo es el siguiente:
+  \[\]
+  \begin{multicols}{2}
+  \begin{algorithm}[H]
+    \DontPrintSemicolon
+    $x_i \leftarrow x_0$\;
+    \While{$|f(x)| > \epsilon$}
+    {
+       $x_{i+1} \leftarrow x_i - \frac{f(x_i)}{f'(x_i)}$
+    }
+  \end{algorithm}
+  \includegraphics[width=0.4\textwidth]{Figures/NewtonRaphson.pdf}
+  \end{multicols}
+\end{frame}
+
+\begin{frame}\frametitle{IK por Newton-Raphson}
+  La función cuyas raíces se desea encontrar es:
+  \[f(q) = FK(q) - p_d = 0\]
+  Por lo que, sustituyendo $f(x)$ el algoritmo quedaría:
+  \begin{algorithm}[H]
+    \DontPrintSemicolon
+    $q_i \leftarrow q_0$\;
+    \While{$|f(q)| > \epsilon$}
+    {
+       $q_{i+1} \leftarrow q_i - \frac{FK(q_i) - p_d}{\textcolor{red}{\frac{d}{dq}\left(FK(q) - p_d\right)}}$
+    }
+  \end{algorithm}
+  \begin{itemize}
+  \item Sin embargo, dado que $f(q): \mathbb{R}^7\rightarrow \mathbb{R}^6$, no podemos hablar de derivada sino que debemos usar un Jacobiano $J(q)\in\mathbb{R}^{6\times 7}$.
+  \item Newton-Raphson incluye una división de la función entre su derivada, pero no existe la división entre matrices, por lo que debemos multiplicar por la inversa del Jacobiano
+  \item Pero el Jacobiano $J(q)$ no es una matriz cuadrada por lo que \textbf{no tiene inversa}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{La matriz pseudoinversa}
+  Para una matriz $A\in\mathbb{R}^{m\times n}$, la matriz pseudoinversa $A^\dagger$ se puede calcular a partir de la descomposición en valores singulares:
+  \[A = U\left(\begin{array}{cc}S&0\\0&0\end{array}\right) V^T\]
+  donde $U$ y $T$ son ambas matrices ortogonales y $S$ está es una matriz diagonal formada por los valores singulares (positivos) de $A$. Con esta descomposición, la pseudoinversa se puede calcular como:
+  \[A^\dagger = V\left(\begin{array}{cc}S^{-1}&0\\0&0\end{array}\right) U^T\]
+\end{frame}
+
+\begin{frame}\frametitle{La matriz pseudoinversa}
+  La pseudoinversa tiene varias propiedades:
+  \begin{itemize}
+  \item $AA^\dagger A = A$ y  $A^\dagger A A^\dagger = A^\dagger$
+  \item $AA^\dagger$ es simétrica y también $A^\dagger A$
+  \item Si $A$ tiene elementos reales, también $A^\dagger$
+  \item Si $A$ es de rango completo por columnas, es decir $rank(A)=n\leq m$, esto es, $A^T A$ es no singular, entonces:
+    \[A^\dagger = (A^T A)^{-1}A^T\qquad \qquad A^\dagger A = I_n\]
+  \item Si $A$ es de rango completo por renglones, es decir $rank(A)=m\leq n$, esto es, $AA^T$ es no singular, entonces:
+    \[A^\dagger = A^T(A A^T)^{-1}\qquad \qquad A A^\dagger = I_m\]
+  \item La solución al problema de mínimos cuadrados:
+    \[\min_x \left\Vert Ax - y \right\Vert_2 \]
+      está dada por
+      \[x = A^\dagger y\]
+  \end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{El Jacobiano de un manipulador}
+  El Jacobiano es una matriz que relaciona la velocidad articular $\dot{q}$ con la velocidad en el espacio cartesiano $[v\;\omega]^T$ (velocidad lineal y angular):
+  \[\dot{p} = \left[\begin{tabular}{c}$v$\\$\omega$\end{tabular}\right] = J \dot{q}
+  \qquad\qquad p =[x,y,z,\phi,\theta,\psi] \in \mathbb{R}^6, \quad J\in \mathbb{R}^{6\times 7},\quad q\in \mathbb{R}^7\]
+  con $(\phi,\theta,\psi)$, los ángulos Roll, Pitch y Yaw respectivamente
+  \[J = \left[ \begin{tabular}{ccc}
+    $\dfrac{\partial x}{\partial q_1}$ & $\cdots$ & $\dfrac{\partial x}{\partial q_7}$\\
+    $\dfrac{\partial y}{\partial q_1}$ & $\cdots$ & $\dfrac{\partial y}{\partial q_7}$\\
+      $\vdots$ & $\ddots$ & $\vdots$ \\
+      $\dfrac{\partial \psi}{\partial q_1}$ & $\cdots$ & $\dfrac{\partial \psi}{\partial q_7}$\\
+    \end{tabular} \right]\]
+\begin{itemize}
+\item La matriz $J$ se puede obtener analíticamente, sin embargo, dado el número de grados de libertad, resulta muy complicado
+\item Se puede obtener aproximando las derivadas parciales con diferencias finitas
+\end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{El Jacobiano de un manipulador}
+  De la definición de derivada parcial:
+  \[\frac{\partial f}{\partial q_i} = \lim_{\Delta q \rightarrow 0}\frac{f(q_1, q_2, \dots, q_i, \dots, q_7) -
+      f(q_1, q_2,\dots,q_i-\Delta q, \dots, q_7)}{\Delta q}\]
+  Podemos aproximar la deriva como:
+  \[\frac{\partial f}{\partial q_i} \approx \frac{f(q_1, q_2, \dots, q_i, \dots, q_7) -
+      f(q_1, q_2,\dots,q_i-\Delta q, \dots, q_7)}{\Delta q}\]
+  O bien
+  \[\frac{\partial f}{\partial q_i} \approx \frac{f(q_1, q_2, \dots, q_i+\Delta q, \dots, q_7) -
+      f(q_1, q_2,\dots,q_i, \dots, q_7)}{\Delta q}\]
+  Promediando ambas aproximaciones:
+  \[\frac{\partial f}{\partial q_i} \approx \frac{f(q_1, q_2, \dots, q_i+\Delta q, \dots, q_7) -
+      f(q_1, q_2,\dots,q_i-\Delta q, \dots, q_7)}{2\Delta q}\]
+\end{frame}
+
+\begin{frame}\frametitle{El Jacobiano del manipulador}
+  Utilizando la aproximación de la derivada parcial, el Jacobiano del manipulador se puede calcular como:
+  \[J = \left[\frac{FK(q^1_{+}) -  FK(q^1_{-})}{2\Delta q} \qquad \cdots \qquad \frac{FK(q^7_{+}) -  FK(q^7_{-})}{2\Delta q}\right]\]
+  donde $FK(q)\in\mathbb{R}^6$ es la cinemática directa del manipulador y 
+  \begin{eqnarray*}
+    q^i_+ &=& [q_1,\quad \dots, \quad q_i + \Delta q, \quad \dots, \quad q_7]\\
+    q^i_- &=& [q_1,\quad \dots, \quad q_i - \Delta q, \quad \dots, \quad q_7]
+  \end{eqnarray*}
+  con $\Delta q$, un valor lo suficientemente pequeño para una buena aproximación de la derivada. 
+
+\end{frame}
+
+\begin{frame}\frametitle{Cinemática Inversa por Newton-Raphson}
+  Sintetizando, aplicamos Newton-Raphson para resolver la ecuación:
+  \[FK(q) - p_d = 0\]
+  Se tiene:
+  \begin{algorithm}[H]
+    \DontPrintSemicolon
+    $q_k \leftarrow q_0$ //Una estimación inicial que puede ser la posición articular actual\;
+    $p \leftarrow FK(q_k)$ //La posición cartesiana que tendría el gripper con la estimación inicial\;
+    \While{$|p - p_d| > \epsilon$}
+    {
+      $J \leftarrow Jacobiano(q_k)$     \;
+      $q_{k+1} \leftarrow q_k - J^\dagger (p - p_d)$\;
+      $p \leftarrow FK(q_{k+1})$ 
+    }
+  \end{algorithm}
+  \begin{itemize}
+  \item Es importante que las variables angulares siempre estén en el intervalo $(-\pi, \pi]$:
+    \begin{itemize}
+    \item Las posiciones articulares
+    \item Los ángulos roll, pitch, yaw
+    \item Las componentes angulares del error $p - p_d$
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{Tarea 08 - Cinemática Inversa}
+  \begin{enumerate}
+  \item En el archivo \texttt{catkin\_ws/src/students/scripts/assignment08.py}, en la función \texttt{forward\_kinematics}, implemente la el cálculo de la cinemática directa. Siga las instrucciones dadas en los comentarios.
+  \item En la función, \texttt{jacobian}, calcule el jacobiano del manipulador para la configuración $q$ utilizando la aproximación por diferencias finitas. Siga las instrucciones de los comentarios del código.
+  \item En la función \texttt{inverse\_kinematics\_xyzrpy}, implemente el cálculo de la cinemática inversa por el método de Newton-Raphson. Siga las instrucciones de los comentarios del código. 
+  \item Ejecute la simulación con el comando \texttt{roslaunch surge\_et\_ambula justina\_gazebo.launch }
+  \item Ejecute la tarea con el comando \texttt{rosrun students assingment08.py}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}\frametitle{Tarea 08 - Cinemática Inversa}
+  \begin{enumerate}
+    \setcounter{enumi}{5}
+  \item En las pestañas \textit{Left Arm} o \textit{Right Arm} de la GUI realice lo siguiente:
+    \begin{enumerate}
+    \item Seleccione la opción \textit{Send Single Pose}
+    \item Escriba \textit{prepare} en el campo \textit{Goal} del grupo \textit{Arm Articular} y presione enter
+    \item Presione el botón \textit{+X} y verifique que el brazo se mueva unos 10 cm hacia adelante
+      \begin{figure}
+        \centering
+         \includegraphics[width=0.4\textwidth]{Figures/IK_Gui.png}
+      \end{figure}
+    \end{enumerate}
+  \end{enumerate}
+  \textbf{Entregables:}
+  \begin{itemize}
+  \item Código modificado en la rama correspondiente del repositorio en línea
+  \end{itemize}
+  \textbf{Deadline: } 2023-11-28 al inicio de la clase. 
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%
+%%% 2023-05-16 %%%%
+%%%%%%%%%%%%%%%%%%%
+\section{Manipulación (2023-05-16)}
+
+\begin{frame}\frametitle{Modelo dinámico de un manipulador}
+  El modelo dinámico de un manipulador está dado por:
+  \[M(q)\ddot{q} + C(q,\dot{q})\dot{q} + B\dot{q} + G(q) = \tau\]
+  donde
+  \begin{itemize}
+  \item $M(q)$ es la matriz de inercias del manipulador
+  \item $C(q,\dot{q})$ es la matriz de fuerzas de Coriolis
+  \item $B$ es la matriz de coeficientes de fricción
+  \item $G(q)$ es el vector de pares debidos a la gravedad
+  \item $\tau$ es el vector de pares de entrada
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%
+%%% 2023-05-18 %%%%
+%%%%%%%%%%%%%%%%%%%
+\section{Manipulación (2023-05-18)}
+
+\begin{frame}\frametitle{El control PID}
+  El control Proporcional-Integral-Derivativo es un tipo de control lineal en lazo cerrado que calcula la acción de control mediante una combinación lineal del error, la integral del error y la derivada del error.
+  \begin{itemize}
+  \item Para el manipulador, el ángulo deseado $q_d$ está dado por el resultado de la cinemática inversa. 
+  \item La posición angular $q$ se obtiene de los motores o del simulador.
+  \item La salida del controlador es el torque $\tau$ que se envía a los motores.
+  \end{itemize}
+  En la versión continua:
+  \[\tau(t) = K_p e(t) + K_I \int e(t)dt + K_d \dot{e}(t)\]
+  con $e = q_d - q$
+  En la versión discreta:
+  \[\tau_i = K_p e_i + K_I\sum_{j=0}^i e_j + K_d\frac{e_i - e_{i-1}}{\Delta t}\]
+  con $\Delta t$, el periodo de muestreo. 
+\end{frame}
+
+\begin{frame}\frametitle{El control PID}
+  Aunque la interacción de las tres señales (error, integral del error y derivada del error) es compleja y depende mucho del sistema, de manera intuitiva se pueden indicar las siguientes funciones de cada componente:
+  \begin{itemize}
+  \item \textbf{Proporcional:} Aumenta o disminuye el tiempo de asentamiento.
+  \item \textbf{Integral:} Reduce el error en estado estable, aunque puede producir inestabiliddad.
+  \item \textbf{Derivativa:} Funciona como amortiguamiento y ayuda a disminuir el sobrepaso. 
+  \end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{Los \textit{stacks} ros\_control y ros\_controllers}
+  Son un conjunto de paquetes que implementan controladores PID y varias interfaces de hardware.
+  \begin{itemize}
+  \item El stack \texttt{ros\_control} implementa varias interfaces de hardware. En este curso, la interfaz usada es la que interactúa con la simulación de Gazebo. De este stack, el paquete \texttt{controller\_manager} es importante porque utiliza un archivo \textit{yaml} para lanzar otros nodos que implementan controladores PID. 
+  \item El stack \texttt{ros\_controllers} implementa varios algoritmos de control para diferentes tipos de actuadores. 
+  \end{itemize}
+\end{frame}
